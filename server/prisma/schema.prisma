@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  name             String
+  email            String            @unique
+  passwordHash     String
+  isDemo           Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  profile          StudentProfile?
+  skills           StudentSkill[]
+  savedInternships SavedInternship[]
+  applications     Application[]
+  roadmaps         LearningRoadmap[]
+}
+
+model StudentProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  college     String   @default("")
+  course      String   @default("")
+  studyYear   String   @default("")
+  targetRole  String   @default("")
+  workMode    String   @default("Remote or Hybrid")
+  location    String   @default("")
+  weeklyHours Int      @default(5)
+  resumeUrl   String   @default("")
+  onboarded   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Skill {
+  id              String                    @id @default(cuid())
+  name            String                    @unique
+  displayName     String
+  category        String                    @default("General")
+  studentSkills   StudentSkill[]
+  internshipRoles InternshipRequiredSkill[]
+}
+
+model StudentSkill {
+  id          String   @id @default(cuid())
+  userId      String
+  skillId     String
+  proficiency String   @default("Beginner") // Beginner | Intermediate | Advanced
+  status      String   @default("Active")   // Active | Learning | Completed
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillId])
+}
+
+model Internship {
+  id              String                    @id @default(cuid())
+  title           String
+  company         String
+  domain          String                    // Frontend | Backend | Full-Stack | Python | Data Analyst | beginner ML | UI/UX
+  description     String
+  responsibilities String                   @default("")
+  location        String
+  workMode        String                    // Remote | Hybrid | On-site
+  experienceLevel String                    @default("Beginner")
+  stipend         String?
+  stipendAmount   Int?
+  duration        String
+  deadline        String?
+  applicationUrl  String?
+  isDemo          Boolean                   @default(true)
+  isVerified      Boolean                   @default(false)
+  createdAt       DateTime                  @default(now())
+  requiredSkills  InternshipRequiredSkill[]
+  savedBy         SavedInternship[]
+  applications    Application[]
+}
+
+model InternshipRequiredSkill {
+  id            String     @id @default(cuid())
+  internshipId  String
+  skillId       String
+  requiredLevel String     @default("Beginner")
+  isRequired    Boolean    @default(true)
+  internship    Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+  skill         Skill      @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([internshipId, skillId])
+}
+
+model SavedInternship {
+  id           String     @id @default(cuid())
+  userId       String
+  internshipId String
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  internship   Internship @relation(fields: [internshipId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, internshipId])
+}
+
+model Application {
+  id           String      @id @default(cuid())
+  userId       String
+  internshipId String?
+  title        String
+  company      String
+  status       String      @default("Interested") // Interested | Applied | Interview | Offer | Rejected
+  appliedAt    DateTime?
+  deadline     String?
+  notes        String      @default("")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  internship   Internship? @relation(fields: [internshipId], references: [id], onDelete: SetNull)
+}
+
+model LearningRoadmap {
+  id         String        @id @default(cuid())
+  userId     String
+  targetRole String
+  source     String        @default("rule-based") // rule-based | ai-assisted
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  steps      RoadmapStep[]
+}
+
+model RoadmapStep {
+  id             String          @id @default(cuid())
+  roadmapId      String
+  title          String
+  objective      String
+  task           String
+  sequence       Int
+  estimatedHours Int             @default(5)
+  completedAt    DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  roadmap        LearningRoadmap @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+}
